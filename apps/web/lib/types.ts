@@ -1,0 +1,10 @@
+export type User = {id:string; name:string; email:string; salary_day:number; minimum_balance:number};
+export type Account = {id:string; name:string; type:'bank'|'cash'|'credit'|'other'; balance:number; opening_balance:number; archived:boolean};
+export type Category = {id:string; name:string; color:string};
+export type Transaction = {id:string; account_id:string; destination_id:string|null; category_id:string|null; original_id:string|null; kind:string; amount:number; description:string; notes:string; occurred_at:string; source:string; voided:boolean};
+export type Budget = {id:string; name:string; category_id:string|null; amount:number; start_date:string; end_date:string; spent:number; remaining:number; utilization_bps:number; projected:number; preliminary:boolean};
+export type Bill = {id:string; name:string; amount:number; account_id:string; next_due:string; frequency:string; essential:boolean};
+export type Goal = {id:string; name:string; target:number; target_date:string; saved:number; progress_bps:number; monthly_required:number};
+export type Dashboard = {start_date:string; end_date:string; cycle_start:string; cycle_end:string; available:number; credit_debt:number; income:number; expenses:number; savings:number; savings_rate_bps:number|null; cash_expenses:number; safe_to_spend:number; daily_safe:number; days_remaining:number; reserved_bills:number; reserved_goals:number; minimum_balance:number; assumptions:string; accounts:Account[]; budgets:Budget[]; categories:(Category & {amount:number})[]; trend:{date:string; amount:number}[]; upcoming:Bill[]; goals:Goal[]; insights:{type:string;title:string;detail:string}[]};
+export type Page<T> = {items:T[]; total:number; page:number; page_size:number};
+export type ImportJob = {id:string; committed:boolean; records:{id:string; row_number:number; data:Partial<Transaction>; error:string|null}[]};

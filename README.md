@@ -76,13 +76,15 @@ npm ci
 npx expo start
 ```
 
-Android emulator: `http://10.0.2.2:8000`. Physical device: your computer's LAN IP with port 8000, on the same network. Production builds require an HTTPS API URL. Mobile refresh credentials use Expo SecureStore; access tokens remain in memory. Use the Next.js application for browser authentication.
+The mobile app defaults to `https://morrowmintapi.devsoumyajit.in`. Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to override it; use the base URL without `/api/v1`, which the client adds. For a local backend, use `http://10.0.2.2:8000` on the Android emulator or your computer's LAN IP with port 8000 on a phone on the same network. Production builds require HTTPS. Restart Expo after changing its environment; an installed release needs a rebuild or configured app update. Mobile refresh credentials use Expo SecureStore; access tokens remain in memory. Use the Next.js application for browser authentication.
 
 **Smart message review:** opt-in Android inbox scanning and local parsing propose editable transactions, ask about uncertain fields, check duplicates and remember confirmed wallet/category choices. Saved message entries support audited corrections. Raw SMS is never sent to the server or AI. Inbox access needs a custom Android build; Expo Go/iOS can use pasted alerts. See [SMS setup, migration and behavior](docs/SMS-REVIEW.md). On Windows, `scripts/start-mobile.ps1 -BuildAndroid` builds and launches the native app with the installed Android SDK.
 
 The mobile core covers registration/sign-in, dashboard, paginated/searchable ledger, accounts/cash, current-cycle budgets, preferences, and reviewed income/expense/transfer entry. The [Profile page](docs/MOBILE-PROFILE.md) includes editing, SMS controls, data export, account deletion, help/privacy, sign-out and version/build details. Full manual-ledger refunds/corrections, goals, bill management, CSV and AI chat are currently available in the web app. No APK or iOS archive is included.
 
 The Morrowmint mobile design uses ivory surfaces, forest-green balance cards, lime accents and bundled Manrope fonts. See [the design notes and references](docs/MOBILE-DESIGN.md).
+
+The [launcher icon and welcome screen](docs/MOBILE-BRANDING.md) include Android adaptive/themed icons, an ivory native splash and a branded session-loading screen. Rebuild the native app after icon or splash configuration changes.
 
 Windows shortcuts from the repository root:
 

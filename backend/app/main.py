@@ -47,6 +47,11 @@ async def internal_error(_, error):
     return JSONResponse({"detail": "Something went wrong. Please try again."}, status_code=500)
 
 
+@app.get("/")
+def index():
+    return {"service": "Morrowmint API", "version": app.version, "docs": "/docs", "health": "/health", "ready": "/ready"}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "paisasense"}

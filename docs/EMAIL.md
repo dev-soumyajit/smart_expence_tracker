@@ -22,6 +22,8 @@ EMAIL_RESEND_COOLDOWN_SECONDS=60
 
 With the flag false, password registration/sign-in remains available and email endpoints return an unavailable response. With it true, registration returns an email challenge rather than tokens. Legacy accounts must prove their email on their next sign-in; unverified refresh sessions also require sign-in. Old addresses are not automatically verified.
 
+If signup works but no mail is queued, confirm `EMAIL_AUTH_ENABLED=true` in the running Render service, not only in local `.env`. A populated API key alone does not enable delivery. For an account already created with email disabled, sign out and sign in again after enabling it, then complete verification. Welcome mail follows that first successful proof. Changing local `.env` does not update Render's environment.
+
 If an unverified account is first claimed through email-code sign-in, its old password is invalidated to prevent someone else's pre-registration password from surviving. The owner can use email-code sign-in or Forgot password to set a password. Password reset signs out every earlier session. Email address changes and MFA are not implemented.
 
 ## Delivery and retries

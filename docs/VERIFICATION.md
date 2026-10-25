@@ -119,6 +119,22 @@ Backend coverage includes expiry, purpose isolation, single use, persisted faile
 
 The provider was mocked throughout. No Resend messages were sent, no real recipients were used, and no Neon migration was applied. Screenshots and fictional email template previews are under `.artifacts/email-auth/`; setup and worker instructions are in [EMAIL.md](EMAIL.md). An initial Metro file-map issue was resolved by restarting the Expo preview with a cleared cache; both mobile and web QA subsequently passed. PostgreSQL emitted the existing Starlette test-adapter deprecation warning and a nonfatal pytest cache permission warning.
 
+## Production authentication initialization — 26 October 2026
+
+The user confirmed that `backend/.env` names the database used by the deployed Render backend. A read-only metadata check found no `users` table or Alembic revision. The committed migrations were then applied to initialize the missing application schema. Alembic reported `b6d8a41f302e (head)` and no pending schema operations.
+
+A deliberately invalid login through `https://morrowmint.devsoumyajit.in/api/auth/login` returned 500 before initialization and the expected 401 credential error afterward. No test account or outbound email was created by this check. An empty registration request returned the expected 422 validation response after the frontend's origin configuration was corrected. The proxy also passed local mocked checks for the configured origin, whitespace/trailing slash normalization, and rejection of foreign or absent origins.
+
+After the user reported successful signup without mail, the deployed email endpoint returned 503 (email disabled), and an aggregate database check found no mail jobs. Local settings had a Resend key but `EMAIL_AUTH_ENABLED=false`. The local flag was enabled after configuration validation. After the deployment environment was updated, the live endpoint returned 202. A subsequent read-only aggregate check showed a welcome and verification job marked sent without provider errors, indicating Resend acceptance. Inbox delivery was not independently confirmed; no email was manually sent by Codex. Account emails, OTPs, passwords and private environment values were not printed.
+
+## Launcher and welcome screen — 26 October 2026
+
+The existing vector M-and-leaf mark was exported to opaque and transparent 1024px PNG assets. The opaque icon has no alpha channel; adaptive foreground and monochrome masks retain transparency. Pixel bounds fit within Android's circular adaptive safe area (302.6px maximum radius inside 312.9px). Expo config resolved the icon assets and splash plugin.
+
+Mobile and web TypeScript checks passed. Browser checks passed the welcome view, delayed connection copy, 320px/390px layouts, reduced-motion behavior and sign-in handoff without API calls or page errors. Screenshots and an icon-mask preview are under `.artifacts/morrowmint-launch/`. The SVGs, PNGs, regeneration command and native rebuild instructions are documented in [MOBILE-BRANDING.md](MOBILE-BRANDING.md).
+
+Android native prebuild and `:app:processDebugResources` passed with the generated splash theme, launcher foreground/monochrome layers, Expo splash-screen and system-UI modules. The final Android Hermes export passed (1,396 modules) with the branded asset included and browser fixture markers excluded. The mobile package manifest and lockfile agree. A final reduced-motion screenshot at 320x568 also passed without text overlap, API calls or page errors. These verify configuration/resources and JavaScript bundling; an installed native splash, APK, iOS archive and physical-device behavior were not verified. The existing mobile dependency advisories remain unchanged (five high, three moderate).
+
 ## Not claimed
 
-No Neon/Render/Vercel cloud deployment, live Groq model response, live Resend delivery/domain verification, APK/iOS build, physical-device test, push delivery, independent security audit or production backup recovery drill has been executed. Local tests use their own database/test users and do not read the user's Neon credentials or run destructive tests against Neon.
+No cloud services were provisioned or deployed by Codex. The user's deployed service and confirmed database were inspected and initialized as recorded above; provider acceptance of user-triggered mail was observed. No live Groq model response, independent inbox delivery/domain verification, APK/iOS build, physical-device test, push delivery, independent security audit or production backup recovery drill has been executed. Historical automated tests used isolated databases; production checks above used metadata, invalid credentials and aggregate mail status rather than test accounts or financial records.

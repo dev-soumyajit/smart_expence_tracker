@@ -11,6 +11,7 @@ import Login from '../app/login';
 import SmsPreview from './sms-preview.web';
 import ProfilePreview from './profile-preview.web';
 import EmailPreview from './email-preview.web';
+import { LaunchScreen } from '../components/launch-screen';
 import { accounts, budgets, categories, dashboard, transactions, user } from './fixtures';
 
 export default function Preview() {
@@ -27,6 +28,7 @@ export default function Preview() {
   if (screen === 'login') return <Login />;
   if (screen === 'sms') return <SmsPreview mode={params.smsCase} onClose={() => setScreen('index')} />;
   if (screen === 'email') return <EmailPreview mode={params.emailCase} onBack={() => setScreen('login')} />;
+  if (screen === 'welcome') return <LaunchScreen waitingForAccount />;
   if (screen === 'settings') return <ProfilePreview onNavigate={route} mode={params.profileCase} onEmpty={() => { setChartEmpty(true); setScreen('index'); }} onRestore={() => { setChartEmpty(false); setScreen('index'); }} />;
   if (screen === 'entry') return <><TransactionEntry accounts={accounts} categories={categories} initialKind={entryKind} onSave={save} onClose={() => setScreen('index')} /><Sheet visible={sheet} title="Development preview" onClose={() => setSheet(false)}><Text style={styles.text}>{result}</Text></Sheet></>;
   const example = chartEmpty ? { ...dashboard, accounts: [], categories: [], goals: [], available: 0, income: 0, expenses: 0, savings: 0, safe_to_spend: 0, daily_safe: 0 } : dashboard;

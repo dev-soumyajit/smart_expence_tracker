@@ -10,7 +10,7 @@ async function proxy(request: NextRequest, context: {params: Promise<{path: stri
   if (!allowedRoots.has(path[0]) || path.some(x => !/^[a-zA-Z0-9_-]+$/.test(x))) return NextResponse.json({detail: 'Not found'}, {status: 404});
   const mutation = !['GET', 'HEAD'].includes(request.method);
   if (mutation) {
-    const expected = process.env.APP_ORIGIN || request.nextUrl.origin;
+    const expected = (process.env.APP_ORIGIN || request.nextUrl.origin).trim().replace(/\/+$/, '');
     if (request.headers.get('origin') !== expected) return NextResponse.json({detail: 'Invalid request origin'}, {status: 403});
   }
   const declaredLength = Number(request.headers.get('content-length') || 0);

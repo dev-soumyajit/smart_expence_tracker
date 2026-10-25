@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { publicAuthRoutes } from '../../../packages/contracts/email-auth';
 export type Tokens={access_token:string;refresh_token:string};
-const base=(process.env.EXPO_PUBLIC_API_URL||'http://10.0.2.2:8000').replace(/\/$/,'');
+const base=(process.env.EXPO_PUBLIC_API_URL||'https://morrowmintapi.devsoumyajit.in').trim().replace(/\/+$/,'');
 let access:string|null=null;
 let refreshing:Promise<boolean>|null=null;
 let expired:()=>void=()=>{};

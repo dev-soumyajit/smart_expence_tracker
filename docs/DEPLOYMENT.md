@@ -104,6 +104,8 @@ User JSON export is a portability feature, not a complete relational backup/rest
 
 ## Troubleshooting and scaling
 
+- A JSON `Not Found` at the bare API domain can mean the deployed version has no `/` route. Check `/health`, `/ready` and `/docs` separately. The current source includes a root API-information route; push and redeploy it to expose that route. The mobile API base is `https://morrowmintapi.devsoumyajit.in` and its client adds `/api/v1` automatically.
+- Registration returning `403` with `Invalid request origin` comes from the frontend proxy. For the custom web domain, set Vercel `APP_ORIGIN=https://morrowmint.devsoumyajit.in` and `API_URL=https://morrowmintapi.devsoumyajit.in`, then redeploy the frontend. Set Render `FRONTEND_ORIGINS=https://morrowmint.devsoumyajit.in`. Keep the origin guard enabled; it protects cookie-authenticated writes.
 - Migration errors: confirm the correct database, SSL, driver prefix, schema permissions and Alembic revision. Never delete tables to bypass a migration error.
 - Cold-start failures: verify backend readiness and frontend function timeout limits; retry after waking. Use paid always-on compute for predictable latency.
 - Sign-in/403 errors: check `APP_ORIGIN`, domain, HTTPS and cookie settings. A changed `SECRET_KEY` invalidates access tokens.

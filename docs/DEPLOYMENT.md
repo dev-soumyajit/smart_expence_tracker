@@ -6,7 +6,7 @@ Target: Vercel web frontend, Render Docker backend, Neon PostgreSQL, optional Gr
 
 Create GitHub, Neon, Render and Vercel accounts; create a Groq account if you want optional AI interpretation. Put this repository in a private GitHub repository. Ensure `.env` files are ignored; only templates may be committed. Run the checks in README before deployment.
 
-Use separate development, staging and production databases and keys. Do not run the automated table-dropping test fixture against your application database. The application is a modular monolith and does not require Redis or a worker service.
+Use separate development, staging and production databases and keys. Do not run the automated table-dropping test fixture against your application database. The application is a modular monolith and does not require Redis. Enable a mail retry worker or schedule repeated drains for reliable email retries; see [email setup](EMAIL.md).
 
 ## 2. Neon database
 
@@ -34,6 +34,11 @@ FRONTEND_ORIGINS=https://YOUR-WEB-DOMAIN
 GROQ_API_KEY=<optional>
 GROQ_MODEL=openai/gpt-oss-120b
 AI_TIMEOUT_SECONDS=15
+RESEND_API_KEY=<your sending API key>
+RESEND_FROM_EMAIL="Morrowmint <noreply@devsoumyajit.in>"
+EMAIL_AUTH_ENABLED=true
+EMAIL_OTP_EXPIRY_SECONDS=600
+EMAIL_RESEND_COOLDOWN_SECONDS=60
 ```
 
 Generate the secret using a password manager or `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Do not copy development secrets. Production mode rejects SQLite, weak default secrets and non-HTTPS origins. Never put private credentials in `NEXT_PUBLIC_*` or `EXPO_PUBLIC_*` variables.
@@ -104,4 +109,5 @@ User JSON export is a portability feature, not a complete relational backup/rest
 - Sign-in/403 errors: check `APP_ORIGIN`, domain, HTTPS and cookie settings. A changed `SECRET_KEY` invalidates access tokens.
 - Database saturation: keep the pool conservative, inspect active connections and slow queries, then choose the right Neon compute/pooling plan.
 - AI failures: verify model access and key, rate limits and timeout; the deterministic answer remains available.
-- Growth: move to paid Render/Neon/Vercel plans, enable real backups and monitoring, replace the in-process rate limiter with a shared implementation before horizontal scaling. Do not add a worker until a real scheduled-delivery need warrants one.
+- Email: verify the sender domain, key and stable server secret; inspect sanitized outbox error codes and Resend's dashboard. Run the retry worker for interrupted or transiently failed sends. Provider acceptance does not confirm inbox delivery.
+- Growth: move to paid Render/Neon/Vercel plans, enable real backups and monitoring, and replace remaining in-process password/AI rate limits before horizontal scaling. Email request/verification counters are already stored in the database.

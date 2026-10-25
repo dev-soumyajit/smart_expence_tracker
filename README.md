@@ -11,7 +11,6 @@ apps/web/            Next.js App Router, TypeScript, Tailwind, React Query
 apps/mobile/         Expo Router, React Native, SecureStore, React Query
 backend/app/         FastAPI, SQLAlchemy 2, Pydantic, accounting and AI services
 backend/alembic/     Versioned database migrations
-backend/tests/       Isolated accounting, API, import and provider-failure tests
 packages/contracts/ Shared amount parsing and input constraints
 infrastructure/     Local PostgreSQL and backend Docker Compose
 docs/               Architecture, deployment, verification and remaining work
@@ -96,30 +95,21 @@ powershell -ExecutionPolicy Bypass -File scripts/start-mobile.ps1 -Preview
 
 The gallery is at http://localhost:8091/design-preview. It uses the mobile presentation components without writing financial records. Actual mobile sign-in uses SecureStore on a device or emulator.
 
-## Tests and builds
+## Build checks
 
 ```sh
-cd backend
-../.venv/Scripts/python -m pytest -q
-cd ../apps/web
+cd apps/web
 npm run build
-npx playwright install chromium
-npx playwright test
 cd ../mobile
 npm run typecheck
 npx expo export --platform android --output-dir ../../.artifacts/mobile
 ```
 
-Browser tests require a running web server at `http://localhost:3000` and the local API. They create and then delete their own test user. Never point browser tests at a live customer environment.
+Automated test suites, QA scripts and their configuration were removed at the user's request. Earlier verification results remain documented in [the verification record](docs/VERIFICATION.md).
 
-Backend tests default to an isolated in-memory SQLite database. For concurrency and PostgreSQL verification, create a separate database named `paisa_test` and set `TEST_DATABASE_URL`. The fixture refuses PostgreSQL database URLs without `paisa_test` in the name; it creates/drops tables in that database. Never use your application's database for these tests.
+## Email configuration
 
-```powershell
-docker compose -f infrastructure/docker-compose.yml exec -T db createdb -U paisa paisa_test
-cd backend
-$env:TEST_DATABASE_URL='postgresql+psycopg://paisa:paisa-local-only@127.0.0.1:5432/paisa_test?connect_timeout=5'
-..\.venv\Scripts\python.exe -m pytest -q
-```
+Add your key to `RESEND_API_KEY` in `backend/.env`. The sender is `Morrowmint <noreply@devsoumyajit.in>`. Verify the domain in Resend, configure a strong `SECRET_KEY`, apply the latest migration, then set `EMAIL_AUTH_ENABLED=true` and restart the API. Mobile and web support verification, email-code sign-in and password recovery; welcome emails follow successful verification. See [email setup and retry worker](docs/EMAIL.md).
 
 ## AI configuration
 

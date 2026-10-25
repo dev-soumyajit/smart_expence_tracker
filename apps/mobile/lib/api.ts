@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { publicAuthRoutes } from '../../../packages/contracts/email-auth';
 export type Tokens={access_token:string;refresh_token:string};
 const base=(process.env.EXPO_PUBLIC_API_URL||'http://10.0.2.2:8000').replace(/\/$/,'');
 let access:string|null=null;
@@ -26,7 +27,7 @@ export async function api<T>(path:string,options:RequestInit={}):Promise<T>{
   if(!__DEV__&&!base.startsWith('https://'))throw new Error('Production mobile API must use HTTPS.');
   const send=()=>fetch(base+'/api/v1/'+path,{...options,headers:{'Content-Type':'application/json',...(access?{Authorization:`Bearer ${access}`} :{}),...options.headers},signal:AbortSignal.timeout(70000)});
   let result=await send();
-  const publicAuth=['auth/login','auth/register','auth/refresh'].includes(path.split('?')[0]);
+  const publicAuth=publicAuthRoutes.includes(path.split('?')[0]);
   if(result.status===401&&!publicAuth){
     if(!refreshing)refreshing=restoreSession().finally(()=>{refreshing=null;});
     if(await refreshing)result=await send();

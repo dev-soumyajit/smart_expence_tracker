@@ -34,14 +34,14 @@ async function proxy(request: NextRequest, context: {params: Promise<{path: stri
     const upstream = await send(access);
     const payload = await upstream.json().catch(() => ({detail: 'The service is waking up. Please try again shortly.'}));
     let tokenData: {access_token: string; refresh_token: string; expires_in: number} | null = null;
-    if (upstream.ok && ['auth/login', 'auth/register', 'auth/refresh'].includes(route)) tokenData = {...payload};
+    if (upstream.ok && ['auth/login', 'auth/register', 'auth/refresh', 'auth/email/verify'].includes(route) && typeof payload.access_token === 'string' && typeof payload.refresh_token === 'string') tokenData = {...payload};
     if (tokenData) { delete payload.access_token; delete payload.refresh_token; delete payload.token_type; }
     const response = NextResponse.json(payload, {status: upstream.status, headers: {'Cache-Control': 'no-store'}});
     if (tokenData) {
       response.cookies.set('ps_access', tokenData.access_token, {...cookieOptions, maxAge: tokenData.expires_in});
       response.cookies.set('ps_refresh', tokenData.refresh_token, {...cookieOptions, maxAge: 60 * 60 * 24 * 14});
     }
-    if ((route === 'auth/logout' && upstream.ok) || (route === 'settings/account' && request.method === 'DELETE' && upstream.ok) || (route === 'auth/refresh' && upstream.status === 401)) {
+    if ((route === 'auth/logout' && upstream.ok) || (route === 'auth/password/reset' && upstream.ok) || (route === 'settings/account' && request.method === 'DELETE' && upstream.ok) || (route === 'auth/refresh' && [401, 403].includes(upstream.status))) {
       response.cookies.set('ps_access', '', {...cookieOptions, maxAge: 0});
       response.cookies.set('ps_refresh', '', {...cookieOptions, maxAge: 0});
     }

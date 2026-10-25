@@ -2,7 +2,7 @@
 
 Implemented code should not be mistaken for the entire requested product or an independently audited production system.
 
-- Email verification and password reset are not implemented; there is no configured email delivery provider. There is no MFA, biometric gate, device-management UI or suspicious-login detection.
+- Resend email verification, email-code sign-in, welcome and password reset are implemented but require domain/key configuration, migration and explicit enabling. Live delivery has not been tested. Durable retries require a worker or scheduled drain; delivery/bounce webhooks are absent. There is no MFA, biometric gate, device-management UI or suspicious-login detection. See [email setup](EMAIL.md).
 - The mobile core is implemented and can be type-checked/bundled. No APK, iOS archive, emulator interaction or physical-device release verification is claimed. Use web for advanced workflows currently absent on mobile.
 - Budgets support explicit weekly/monthly/custom/salary-aligned periods and baseline projection. Automatic rollover, detailed budget editing UI, automatic salary recognition and comparative history views remain incomplete.
 - Bill reminders are in-app schedules with explicit expense confirmation. Delivery of push/email/background notifications, recurring income, end dates, bill edits and recurring transfer payments remain incomplete. No worker is silently marking bills as paid.

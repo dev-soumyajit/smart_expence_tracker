@@ -10,13 +10,15 @@ import { Button, colors, fonts, SectionHeading, Sheet, styles } from '../compone
 import Login from '../app/login';
 import SmsPreview from './sms-preview.web';
 import ProfilePreview from './profile-preview.web';
+import EmailPreview from './email-preview.web';
 import { accounts, budgets, categories, dashboard, transactions, user } from './fixtures';
 
 export default function Preview() {
-  const params = useLocalSearchParams<{ screen?: string; smsCase?: string; profileCase?: string }>();
+  const params = useLocalSearchParams<{ screen?: string; smsCase?: string; profileCase?: string; emailCase?: string }>();
   const [screen, setScreen] = useState(params.screen || 'index'), [hidden, setHidden] = useState(false), [entryKind, setEntryKind] = useState<EntryKind>('expense');
   const [sheet, setSheet] = useState(false), [result, setResult] = useState(''), [chartEmpty, setChartEmpty] = useState(false);
   const scroll=useRef<ScrollView>(null);
+  useEffect(()=>{ if (params.screen) setScreen(params.screen); },[params.screen]);
   useEffect(()=>{scroll.current?.scrollTo({y:0,animated:false});},[screen]);
   const add = (kind: string) => { setEntryKind(kind === 'income' || kind === 'transfer' ? kind : 'expense'); setScreen('entry'); };
   const route = (section: string) => setScreen(section === 'home' ? 'index' : section);
@@ -24,6 +26,7 @@ export default function Preview() {
   const save = async (payload: EntryPayload) => { show('Preview received ' + payload.amount + ' paise as ' + payload.kind + '. Example data only; nothing was saved.'); };
   if (screen === 'login') return <Login />;
   if (screen === 'sms') return <SmsPreview mode={params.smsCase} onClose={() => setScreen('index')} />;
+  if (screen === 'email') return <EmailPreview mode={params.emailCase} onBack={() => setScreen('login')} />;
   if (screen === 'settings') return <ProfilePreview onNavigate={route} mode={params.profileCase} onEmpty={() => { setChartEmpty(true); setScreen('index'); }} onRestore={() => { setChartEmpty(false); setScreen('index'); }} />;
   if (screen === 'entry') return <><TransactionEntry accounts={accounts} categories={categories} initialKind={entryKind} onSave={save} onClose={() => setScreen('index')} /><Sheet visible={sheet} title="Development preview" onClose={() => setSheet(false)}><Text style={styles.text}>{result}</Text></Sheet></>;
   const example = chartEmpty ? { ...dashboard, accounts: [], categories: [], goals: [], available: 0, income: 0, expenses: 0, savings: 0, safe_to_spend: 0, daily_safe: 0 } : dashboard;

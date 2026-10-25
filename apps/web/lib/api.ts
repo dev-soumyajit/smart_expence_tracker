@@ -1,4 +1,5 @@
 import { parseINR } from '../../../packages/contracts/validation';
+import { publicAuthRoutes } from '../../../packages/contracts/email-auth';
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -6,7 +7,7 @@ let refreshing: Promise<Response> | null = null;
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const send = () => fetch('/api/' + path, { ...options, headers: {'Content-Type': 'application/json', ...options?.headers}, cache: 'no-store' });
   let response = await send();
-  if (response.status === 401 && !['auth/login', 'auth/register', 'auth/refresh'].includes(path)) {
+  if (response.status === 401 && !publicAuthRoutes.includes(path.split('?')[0])) {
     if (!refreshing) refreshing = fetch('/api/auth/refresh', {method:'POST'}).finally(() => { refreshing = null; });
     if ((await refreshing).ok) response = await send();
   }

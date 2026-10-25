@@ -5,7 +5,8 @@ import io
 import json
 from hashlib import sha256
 from decimal import Decimal, InvalidOperation
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select, func, or_, delete
 from sqlalchemy.orm import Session as DB
@@ -15,7 +16,8 @@ from . import models as m, schemas as s
 from .services.ledger import owned, pack, write, void, balances
 from .services.finance import summary, budget_summary, goals, today, shift_month, IST
 from .services.assistant import answer
-from .services import sms
+from .services import sms, email_auth, mail
+from .core.config import settings
 
 router = APIRouter(prefix="/api/v1")
 Database = Annotated[DB, Depends(get_db, scope="function")]
@@ -23,11 +25,20 @@ AuthUser = Annotated[m.User, Depends(current_user)]
 
 
 def public_user(user):
-    return {k: getattr(user, k) for k in ("id", "name", "email", "salary_day", "minimum_balance")}
+    return email_auth.public_user(user)
+
+
+def email_result(result, db, background):
+    if result.jobs:
+        # Function-scoped DB dependency commits before the response/background task is sent.
+        background.add_task(mail.dispatch_ids, db.get_bind(), result.jobs)
+    return JSONResponse(jsonable_encoder(result.body), status_code=result.status, headers=result.headers)
 
 
 @router.post("/auth/register", status_code=201, dependencies=[Depends(auth_limit)])
-def register(data: s.Register, db: Database):
+def register(data: s.Register, db: Database, request: Request, background_tasks: BackgroundTasks):
+    if settings().email_auth_enabled:
+        return email_result(email_auth.register(db, data, request.client.host if request.client else "unknown"), db, background_tasks)
     email = str(data.email).lower()
     if db.scalar(select(m.User.id).where(m.User.email == email)):
         raise HTTPException(409, "Unable to register this email. Try signing in.")
@@ -40,10 +51,12 @@ def register(data: s.Register, db: Database):
 
 
 @router.post("/auth/login", dependencies=[Depends(auth_limit)])
-def login(data: s.Login, db: Database):
-    user = db.scalar(select(m.User).where(m.User.email == str(data.email).lower()))
+def login(data: s.Login, db: Database, request: Request, background_tasks: BackgroundTasks):
+    if settings().email_auth_enabled:
+        return email_result(email_auth.password_login(db, data, request.client.host if request.client else "unknown"), db, background_tasks)
+    user = db.scalar(select(m.User).where(m.User.email == str(data.email).lower()).with_for_update())
     valid = passwords.verify(data.password, user.password_hash if user else dummy_hash)
-    if not user or not valid:
+    if not user or not valid or user.signup_pending:
         raise HTTPException(401, "Incorrect email or password")
     return {**issue(db, user), "user": public_user(user)}
 
@@ -53,7 +66,34 @@ def refresh(data: s.Refresh, db: Database):
     session = db.scalar(select(m.Session).where(m.Session.refresh_hash == token_hash(data.refresh_token), m.Session.revoked.is_(False), m.Session.expires_at > datetime.now(timezone.utc)).with_for_update())
     if not session:
         raise HTTPException(401, "Session expired")
-    return issue(db, db.get(m.User, session.user_id), session)
+    user = db.get(m.User, session.user_id)
+    if not user or user.signup_pending or (settings().email_auth_enabled and not user.email_verified_at):
+        raise HTTPException(401, "Verify your email by signing in again")
+    return issue(db, user, session)
+
+
+@router.post("/auth/email/request", dependencies=[Depends(auth_limit)])
+def request_email_code(data: s.EmailCodeRequest, db: Database, request: Request, background_tasks: BackgroundTasks):
+    result = email_auth.unavailable() or email_auth.request_code(db, data.email, data.purpose, request.client.host if request.client else "unknown")
+    return email_result(result, db, background_tasks)
+
+
+@router.post("/auth/email/resend", dependencies=[Depends(auth_limit)])
+def resend_email_code(data: s.EmailCodeResend, db: Database, request: Request, background_tasks: BackgroundTasks):
+    result = email_auth.unavailable() or email_auth.resend(db, data.challenge_id, request.client.host if request.client else "unknown")
+    return email_result(result, db, background_tasks)
+
+
+@router.post("/auth/email/verify", dependencies=[Depends(auth_limit)])
+def verify_email_code(data: s.EmailCodeVerify, db: Database, request: Request, background_tasks: BackgroundTasks):
+    result = email_auth.unavailable() or email_auth.verify(db, data, data.purpose, request.client.host if request.client else "unknown")
+    return email_result(result, db, background_tasks)
+
+
+@router.post("/auth/password/reset", dependencies=[Depends(auth_limit)])
+def reset_password(data: s.EmailPasswordReset, db: Database, request: Request, background_tasks: BackgroundTasks):
+    result = email_auth.unavailable() or email_auth.verify(db, data, "password_reset", request.client.host if request.client else "unknown")
+    return email_result(result, db, background_tasks)
 
 
 @router.post("/auth/logout")
@@ -277,7 +317,7 @@ def delete_user(data: s.Login, user: AuthUser, db: Database):
     if str(data.email).lower() != user.email or not passwords.verify(data.password, user.password_hash):
         raise HTTPException(403, "Verify your email and password")
     # Remove dependent rows explicitly; self-referencing refunds precede original transactions.
-    for model in [m.Audit, m.Contribution, m.Goal, m.Budget, m.Recurring, m.ImportJob, m.SmsReceipt]:
+    for model in [m.Audit, m.Contribution, m.Goal, m.Budget, m.Recurring, m.ImportJob, m.SmsReceipt, m.MailJob, m.EmailChallenge]:
         db.execute(delete(model).where(model.user_id == user.id))
     db.execute(delete(m.Transaction).where(m.Transaction.user_id == user.id, m.Transaction.kind == "refund"))
     db.execute(delete(m.Transaction).where(m.Transaction.user_id == user.id))

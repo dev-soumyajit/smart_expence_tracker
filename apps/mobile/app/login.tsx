@@ -11,6 +11,8 @@ import { passwordMaxLength, passwordMinLength } from '../../../packages/contract
 import { api, storeSession, type Tokens } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Brand, Button, colors, ErrorBox, Field, fonts, styles } from '../components/ui';
+import { EmailAuthPage, type EmailAuthActions } from '../components/email-auth-page';
+import { isEmailChallenge, type EmailChallenge, type EmailPurpose } from '../../../packages/contracts/email-auth';
 
 const schema = z.object({ email: z.email('A valid email gets you where you need to go.'), password: z.string().min(passwordMinLength, 'Use at least 12 characters.').max(passwordMaxLength), name: z.string().max(80).optional() });
 type Values = z.infer<typeof schema>;
@@ -19,14 +21,29 @@ export function WelcomeArt() {
 }
 export default function Login() {
   const [signup, setSignup] = useState(false), [visible, setVisible] = useState(false), [error, setError] = useState('');
+  const [mailFlow, setMailFlow] = useState<{ purpose: EmailPurpose; email: string; challenge?: EmailChallenge } | null>(null);
   const auth = useAuth();
-  const { control, handleSubmit, clearErrors, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '', name: '' } });
+  const { control, handleSubmit, clearErrors, getValues, setValue, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '', name: '' } });
   if (auth.signedIn) return <Redirect href="/" />;
   const submit = handleSubmit(async values => {
     setError('');
-    try { const tokens = await api<Tokens>('auth/' + (signup ? 'register' : 'login'), { method: 'POST', body: JSON.stringify(signup ? { ...values, name: values.name?.trim() || 'Friend' } : { email: values.email, password: values.password }) }); await storeSession(tokens); auth.setSignedIn(true); }
+    try {
+      const result = await api<Tokens | EmailChallenge>('auth/' + (signup ? 'register' : 'login'), { method: 'POST', body: JSON.stringify(signup ? { ...values, name: values.name?.trim() || 'Friend' } : { email: values.email, password: values.password }) });
+      if (isEmailChallenge(result)) { setValue('password', ''); setMailFlow({ purpose: result.purpose, email: values.email, challenge: result }); return; }
+      await storeSession(result); auth.setSignedIn(true);
+    }
     catch (problem) { setError((problem as Error).message); }
   });
+  const emailActions: EmailAuthActions = {
+    request: (email, purpose) => api<EmailChallenge>('auth/email/request', { method: 'POST', body: JSON.stringify({ email, purpose }) }),
+    resend: challenge_id => api<EmailChallenge>('auth/email/resend', { method: 'POST', body: JSON.stringify({ challenge_id }) }),
+    verify: async (challenge, code, new_password) => {
+      if (challenge.purpose === 'password_reset') { await api('auth/password/reset', { method: 'POST', body: JSON.stringify({ challenge_id: challenge.challenge_id, code, new_password }) }); return; }
+      const tokens = await api<Tokens>('auth/email/verify', { method: 'POST', body: JSON.stringify({ challenge_id: challenge.challenge_id, code, purpose: challenge.purpose }) });
+      await storeSession(tokens); auth.setSignedIn(true);
+    },
+  };
+  if (mailFlow) return <EmailAuthPage purpose={mailFlow.purpose} initialEmail={mailFlow.email} initialChallenge={mailFlow.challenge} actions={emailActions} onBack={() => { setMailFlow(null); setSignup(false); setError(''); setValue('password', ''); }} />;
   return <SafeAreaView style={styles.safe}><KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={login.page}>
     <View style={{ alignItems: 'center', paddingTop: 5 }}><Brand /></View>
     <View style={{ alignItems: 'center', gap: 12, marginTop: 25 }}><View style={login.promise}><View style={{ width: 5, height: 5, borderRadius: 4, backgroundColor: '#83A34B' }} /><Text style={{ fontFamily: fonts.bold, fontSize: 8, letterSpacing: 1.8, color: '#7A8B60' }}>MAKE ROOM FOR TOMORROW</Text></View><Text style={login.headline}>Small habits.{'\n'}<Text style={{ color: '#729251' }}>Brighter tomorrows.</Text></Text><Text style={[styles.subtitle, { textAlign: 'center', maxWidth: 280 }]}>A calmer relationship with your money,{"\n"}one everyday decision at a time.</Text></View>
@@ -36,6 +53,7 @@ export default function Login() {
       <Controller control={control} name="email" render={({ field: { value, onChange, onBlur } }) => <Field label="Email address" icon="mail-outline" value={value} onChangeText={onChange} onBlur={onBlur} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholder="you@example.com" error={errors.email?.message} />} />
       <Controller control={control} name="password" render={({ field: { value, onChange, onBlur } }) => <Field label="Password" icon="lock-closed-outline" value={value} onChangeText={onChange} onBlur={onBlur} secureTextEntry={!visible} autoCapitalize="none" autoComplete={signup ? 'new-password' : 'current-password'} placeholder="At least 12 characters" error={errors.password?.message} right={<Pressable accessibilityRole="button" accessibilityLabel={visible ? 'Hide password' : 'Show password'} onPress={() => setVisible(!visible)} hitSlop={10} style={{ minHeight: 44, justifyContent: 'center' }}><Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.muted} /></Pressable>} />} />
       {!!error && <ErrorBox message={error} />}<Button title={signup ? 'Create my account' : 'Let’s get you in'} icon="arrow-forward" busy={isSubmitting} onPress={() => void submit()} />
+      {!signup && <View style={{ gap: 3 }}><Button title="Sign in with an email code" secondary icon="mail-outline" disabled={isSubmitting} onPress={() => setMailFlow({ purpose: 'email_login', email: getValues('email') })} /><Pressable accessibilityRole="button" accessibilityLabel="Forgot password?" disabled={isSubmitting} onPress={() => setMailFlow({ purpose: 'password_reset', email: getValues('email') })} style={{ alignItems: 'center', minHeight: 44, justifyContent: 'center' }}><Text style={styles.link}>Forgot password?</Text></Pressable></View>}
       <Pressable accessibilityRole="button" onPress={() => { setSignup(!signup); setError(''); clearErrors(); }} style={{ alignItems: 'center', minHeight: 44, justifyContent: 'center' }}><Text style={styles.small}>{signup ? 'Already making moves? ' : 'A new beginning? '}<Text style={{ fontFamily: fonts.bold, color: colors.green }}>{signup ? 'Sign in' : 'Join Morrowmint'}</Text></Text></Pressable>
     </View>
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 2 }}><Ionicons name="shield-checkmark-outline" color="#8B9D76" size={13} /><Text style={[styles.small, { fontSize: 9 }]}>Your money is personal. Your space stays yours.</Text></View>

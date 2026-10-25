@@ -46,19 +46,8 @@ Or run `npm ci` then `npm run android` inside `apps/mobile`. Configure the devic
 
 Android inbox access uses [`Telephony.Sms.Inbox`](https://developer.android.com/reference/android/provider/Telephony.Sms.Inbox) and `READ_SMS`. Android treats this as a restricted permission; installation/runtime grants and distribution requirements still apply. Google Play lists SMS-based money management as an exception subject to its permission declaration and review. No Play approval is claimed. See the [official SMS permission policy](https://support.google.com/googleplay/android-developer/answer/10208820?hl=en) and [Expo native module guide](https://docs.expo.dev/modules/get-started/).
 
-## Verification commands
+## Verification record
 
-The backend test fixture uses isolated SQLite by default, or an explicitly configured `paisa_test` PostgreSQL database. Concurrent confirm/correction checks require PostgreSQL.
-
-```powershell
-cd backend
-..\.venv\Scripts\python.exe -m pytest -q
-cd ../apps/mobile
-npm run typecheck
-node node_modules/typescript/bin/tsc ../../packages/contracts/sms.ts --outDir ../../.artifacts/sms-tests --target ES2022 --module commonjs --skipLibCheck
-node --test ../../scripts/test-sms.cjs
-```
-
-For browser UI checks, start the development gallery with `scripts/start-mobile.ps1 -Preview`, install Chromium through the web app's Playwright setup, then run `node scripts/qa-sms-review.cjs`. This tests the actual shared React Native review component using browser-only example data, without API calls or financial writes. Example screenshots are in `.artifacts/sms-review/`. Browser checks do not establish phone permission/provider behavior; device verification is a separate check.
+The automated test files and QA scripts were removed at the user's request after the checks below were recorded. The development gallery remains available with `scripts/start-mobile.ps1 -Preview`. Example screenshots are in `.artifacts/sms-review/`. Browser checks do not establish phone permission/provider behavior; device verification is a separate check.
 
 Recorded results: 67 PostgreSQL tests passed; SQLite passed 63 with four PostgreSQL concurrency checks skipped; 50 local parser/learning cases passed; mobile TypeScript, browser SMS/design flows, Android Hermes export and the native SMS module's Kotlin compilation passed. Migration round trips and schema comparison passed on both databases. No physical device was connected. See [the full verification record](VERIFICATION.md).

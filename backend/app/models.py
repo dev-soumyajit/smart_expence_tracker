@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, date
 from uuid import uuid4
-from sqlalchemy import String, Integer, BigInteger, Boolean, DateTime, Date, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, Index, Text
+from sqlalchemy import String, Integer, BigInteger, Boolean, DateTime, Date, ForeignKey, ForeignKeyConstraint, UniqueConstraint, CheckConstraint, Index, Text, false
 from sqlalchemy.orm import Mapped, mapped_column
 from .core.db import Base
 
@@ -24,9 +24,50 @@ class User(Row, Base):
     email: Mapped[str] = mapped_column(String(254), unique=True)
     name: Mapped[str] = mapped_column(String(80))
     password_hash: Mapped[str] = mapped_column(String(255))
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    signup_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     salary_day: Mapped[int] = mapped_column(Integer, default=1)
     minimum_balance: Mapped[int] = mapped_column(BigInteger, default=0)
     __table_args__ = (CheckConstraint("salary_day BETWEEN 1 AND 31"), CheckConstraint("minimum_balance >= 0"))
+
+
+class EmailThrottle(Base):
+    __tablename__ = "email_throttles"
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmailChallenge(Row, Base):
+    __tablename__ = "email_challenges"
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    email_key: Mapped[str] = mapped_column(String(64), index=True)
+    purpose: Mapped[str] = mapped_column(String(24))
+    code_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    registration_password_hash: Mapped[str | None] = mapped_column(String(255))
+    registration_name: Mapped[str | None] = mapped_column(String(80))
+    __table_args__ = (CheckConstraint("purpose IN ('verify_email','email_login','password_reset')"), CheckConstraint("attempts >= 0"))
+
+
+class MailJob(Row, Base):
+    __tablename__ = "mail_jobs"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    challenge_id: Mapped[str | None] = mapped_column(ForeignKey("email_challenges.id", ondelete="CASCADE"))
+    event_key: Mapped[str] = mapped_column(String(120), unique=True)
+    kind: Mapped[str] = mapped_column(String(24))
+    payload: Mapped[str] = mapped_column(Text)  # OTP placeholder only; never a code or password.
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_id: Mapped[str | None] = mapped_column(String(100))
+    last_error: Mapped[str | None] = mapped_column(String(50))
+    __table_args__ = (CheckConstraint("status IN ('pending','sending','retry','sent','failed','expired')"), CheckConstraint("attempts >= 0"))
 
 
 class Session(Row, Base):

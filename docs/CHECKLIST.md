@@ -19,6 +19,7 @@ Repository inspected: empty workspace; no existing source, configuration, migrat
 - [x] Local backend Docker build, PostgreSQL migrations and readiness checks.
 - [x] Final browser end-to-end verification: two Playwright tests passed, desktop and 390px screenshots captured.
 - [ ] Native APK/device verification and upstream mobile dependency advisory resolution.
-- [ ] Email verification/reset, scheduled push/email, richer forecasting, goal reallocation, full mobile parity.
+- [x] Resend verification, email-code sign-in, password recovery, welcome/changed-password mail, durable outbox, abuse limits and web/mobile screens; provider delivery requires operator configuration.
+- [ ] Scheduled push/bill email, richer forecasting, goal reallocation, full mobile parity.
 
 This checklist is updated with actual verification results; unexecuted work stays unchecked.

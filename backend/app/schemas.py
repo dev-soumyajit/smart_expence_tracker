@@ -27,6 +27,25 @@ class Refresh(Input):
     refresh_token: str = Field(min_length=20, max_length=200)
 
 
+class EmailCodeRequest(Input):
+    email: EmailStr
+    purpose: Literal["email_login", "password_reset"]
+
+
+class EmailCodeResend(Input):
+    challenge_id: str = Field(min_length=36, max_length=36, pattern=r"^[a-fA-F0-9-]{36}$")
+
+
+class EmailCodeVerify(EmailCodeResend):
+    code: str = Field(pattern=r"^[0-9]{6}$")
+    purpose: Literal["verify_email", "email_login"]
+
+
+class EmailPasswordReset(EmailCodeResend):
+    code: str = Field(pattern=r"^[0-9]{6}$")
+    new_password: str = Field(min_length=12, max_length=128)
+
+
 class AccountIn(Input):
     name: Name
     type: Literal["bank", "cash", "credit", "other"]

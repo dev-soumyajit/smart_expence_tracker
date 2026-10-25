@@ -1,5 +1,7 @@
 # Verification record
 
+The automated test suites, QA scripts and their configuration were subsequently removed at the user's request. Results below record checks performed before removal; referenced test commands and scripts are no longer available.
+
 Work was performed locally on Windows with Python 3.12, Node 22, Docker Desktop, PostgreSQL 17 and Expo SDK 55. Dates refer to Asia/Kolkata, 24 October 2026.
 
 Executed checks:
@@ -98,6 +100,25 @@ These need reassessment and a coherent supported SDK/dependency upgrade before n
 
 After adding the compatible Expo crypto module, the current mobile audit reports eight advisories: five high and three moderate. The additional report is [Zod constrained-collection memory exhaustion](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) in Expo CLI's nested Zod 3.25.76. Both applications directly use Zod 4.6.7. The audit's proposed Expo/Router changes cross SDK compatibility boundaries and were not forced; the upstream mobile dependency work remains a release limitation.
 
+## Resend email verification — 26 October 2026
+
+| Check | Result |
+| --- | --- |
+| Full backend suite, disposable PostgreSQL 17 | 103 passed, including concurrent code consumption, resend and outbox worker claims |
+| Full backend suite, isolated SQLite | 95 passed; eight PostgreSQL-specific tests skipped |
+| Email migration | Upgrade, schema comparison, downgrade and re-upgrade passed on separate SQLite and PostgreSQL databases |
+| Session, export and auth proxy checks | 18 Node tests passed; challenge responses do not set cookies, successful verification strips tokens into HTTP-only cookies, reset clears cookies and cross-origin requests are rejected |
+| Web production build | Passed |
+| Web email browser QA | Passed registration verification, invalid code, resend, successful sign-in, password recovery validation/success, email-code sign-in and responsive layout with mocked APIs |
+| Mobile email browser QA | Passed verification, email request validation, reset validation/success, resend, expiry, failed-request input retention and 390px/360px layouts; no API calls or browser errors |
+| Mobile TypeScript | Passed |
+| Android JavaScript/Hermes export | Passed, 1,393 modules; browser email/example fixtures excluded from the native bundle |
+| Mobile design, Profile and SMS review regressions | All three browser scripts passed with example data; no financial API writes |
+
+Backend coverage includes expiry, purpose isolation, single use, persisted failed attempts, latest-code-only resends, mailbox/IP/global limits, welcome deduplication, pre-registration password binding, legacy verification, password reset revocation, secret rotation, provider outages/permanent failures, idempotent retries, expired mail, rollback isolation, HTML escaping and exclusion from financial exports. Configuration tests reject unsafe enabled settings and check that error strings do not echo secrets.
+
+The provider was mocked throughout. No Resend messages were sent, no real recipients were used, and no Neon migration was applied. Screenshots and fictional email template previews are under `.artifacts/email-auth/`; setup and worker instructions are in [EMAIL.md](EMAIL.md). An initial Metro file-map issue was resolved by restarting the Expo preview with a cleared cache; both mobile and web QA subsequently passed. PostgreSQL emitted the existing Starlette test-adapter deprecation warning and a nonfatal pytest cache permission warning.
+
 ## Not claimed
 
-No Neon/Render/Vercel cloud deployment, live Groq model response, APK/iOS build, physical-device test, push delivery, independent security audit or production backup recovery drill has been executed. Local tests use their own database/test users and do not read the user's Neon credentials or run destructive tests against Neon.
+No Neon/Render/Vercel cloud deployment, live Groq model response, live Resend delivery/domain verification, APK/iOS build, physical-device test, push delivery, independent security audit or production backup recovery drill has been executed. Local tests use their own database/test users and do not read the user's Neon credentials or run destructive tests against Neon.

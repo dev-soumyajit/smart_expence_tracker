@@ -15,7 +15,7 @@ The page includes:
 - About, app version, build number, currency, language and timezone.
 - A compact developer credit for Soumyajit Khan, also shown in About.
 
-Version and build values come from `apps/mobile/app.json` via Expo configuration. They currently display **0.1.0 · Build 1**. Change the release configuration to update the displayed values. Email is read-only; password recovery/change and delivery of push notifications remain existing product limitations.
+Version and build values come from `apps/mobile/app.json` via Expo configuration. They currently display **0.1.0 · Build 1**. Change the release configuration to update the displayed values. Email is read-only. Password recovery is available through Forgot password on sign-in when [Resend email authentication](EMAIL.md) is enabled. Push notification delivery remains incomplete.
 
 Profile edits preserve the other money preferences. Saving cancels an older in-flight profile refresh before updating the query cache, then refreshes the dashboard. Profile loading and sign-out use token refresh for authenticated `/auth/me` and `/auth/logout` requests; invalid login credentials do not trigger refresh. Logout/deletion clear the local session and cached profile data only after the corresponding backend operation succeeds.
 
@@ -41,10 +41,6 @@ The browser profile check passed at 390px and 360px: editing and validation, pai
 
 Thirteen focused Node tests passed: eight for export availability, old builds, JSON/paise, cache scoping, receiver readability and failure cleanup; five for profile/logout token refresh, revoked sessions, login errors and simultaneous requests. Browser fixture markers were absent from the native release bundle.
 
-```powershell
-node --test scripts/test-profile-export.cjs scripts/test-mobile-session.cjs
-# With the development preview on port 8091 and Playwright Chromium installed:
-node scripts/qa-mobile-profile.cjs
-```
+These results were recorded before the test files and QA scripts were removed at the user's request.
 
 Screenshots are in `.artifacts/mobile-profile/`. Verification did not export or delete a real account or modify the backend database. Physical-device share-sheet, SMS permission status and iOS behavior remain unverified.
